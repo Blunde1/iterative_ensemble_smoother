@@ -16,7 +16,7 @@ From the contents, it should however be clear how a simulation study could be co
 
 ## Gaussian conditional transport
 
-Let $x$ and $y$ be random variables jointly multivariate Gaussian with mean and covariance
+Let $x$ and $y$ be random variables with a joint multivariate Gaussian given by mean and covariance
 
 $$
 \begin{bmatrix}
@@ -39,7 +39,7 @@ K = \Sigma_{xy}\Sigma_{y}^{-1}.
 $$
 
 Then, a multivariate sample $(x_i,y_i)$ is _transported_ to a sample from the conditional
-$p(x|y)$, having observed $y$ as such, via the formula 
+$p(x|y)$, having observed $y$ as such, via the formula
 
 $$
 x_i + K(y-y_i) \sim p(x|y).
@@ -51,9 +51,9 @@ $$
 x | y \sim \mathcal{N}(\mu_x + K(y - \mu_y), \Sigma_{x} - K \Sigma_{yx}).
 $$
 
-For any distribution having a bijection between (the informative parts of) 
+For any distribution having a bijection between (the informative parts of)
 $x$ and $y$, there exist a similar mapping, transporting a sample $(x,y)$ to $x|y$.
-The EnKF and ES variants follows from writing $y=d=Hx+\epsilon$ where 
+The EnKF and ES variants follows from writing $y=d=Hx+\epsilon$ where
 $\epsilon\sim \mathcal{N}(0,\Sigma_{\epsilon})$, thus $\Sigma_y=H\Sigma_xH^T+\Sigma_{\epsilon}$.
 Note that $y$ is common to use as $y=Hx$ but this is not the case in the preliminaries here.
 A point of confusion is that it is indeed _not_ the observation $d$ that is "perturbed" with noise,
@@ -95,7 +95,7 @@ $$
 
 Note two formulas:
 
-1. Information is additive, and we may decompose the KLD as 
+1. Information is additive, and we may decompose the KLD as
 the KLD over the marginal and the expected conditional KLD w.r.t. the variable considered in the marginal.
 The optimization can be done disjoint if marginal and conditional marginal depend upon disjoint parameter-sets.
 
@@ -103,14 +103,14 @@ $$
 D_{KL}(P(x, y) \parallel Q(x, y)) = D_{KL}(P(y) \parallel Q(y)) + E_{P(y)}\left[D_{KL}(P(x | y) \parallel Q(x | y))\right]
 $$
 
-2. The relative Kullback-Leibler Divergence (KLD) between two distributions 
+2. The relative Kullback-Leibler Divergence (KLD) between two distributions
 $P$ and $Q$ is given by:
 
 $$
 D_{KL}(P \parallel Q) = E_P[\log(P)] - E_P[\log(Q)]
 $$
 
-Dropping the first term, which is constant with respect to the model 
+Dropping the first term, which is constant with respect to the model
 $Q$, and retaining the negative of the latter term gives us the objective of maximizing the likelihood (or minimizing the negative log-likelihood) of $Q$:
 
 $$
@@ -122,7 +122,7 @@ This is the core for all of maximum likelihood estimation, information criteria,
 ### Why EnKF and ES works so well
 
 Let $(x,y)\sim P$ possibly non-Gaussian and assume we have a finite dataset to infer a model $Q$ from.
-Arguably, the most important aspects to encode in $Q$, without any other knowledge, are 
+Arguably, the most important aspects to encode in $Q$, without any other knowledge, are
 the two first moments of $P$.
 Having access to the sample covariances of
 $\Sigma_{xy}$
@@ -178,7 +178,7 @@ y - \mu_y
 \end{bmatrix}
 $$
 
-and the negative log-likelihood 
+and the negative log-likelihood
 
 $$
 -\frac{1}{n}\sum_i \log(p(x_i,y_i))
@@ -216,7 +216,7 @@ In spoken language, this means the negative log-likelihood for the conditional,
 and the conditioning variable $y$ is sampled from its true distribution and then averaged over.
 
 A Kalman-type method estimating a model Kalman-gain, say $\hat{K}$, transports samples $(x_i,y_i)$
-according to 
+according to
 $x_i^\ast =x_i + \hat{K} (y-y_i)$ which is Gaussian with mean and covariance
 
 $$
@@ -308,7 +308,7 @@ It is offset in the exact way so that we arrive at LLS, which we _know_ is ineff
 
 It is possible to now err and reason that due to arriving at the same stimator, the LS and Gaussian-NLL objectives are equivalent.
 This is, however false.
-It is rather that in this particular case, when we have failed to inform of structure in dependence, 
+It is rather that in this particular case, when we have failed to inform of structure in dependence,
 then the Gaussian-NLL arrives at the same inefficient LLS estimator.
 We know that the LLS estimator is inefficient when Gauss-Markov conditions are not satisfied.
 And we know that this is because the LS objective then does not appropriately target dependence.
@@ -344,7 +344,7 @@ But are generally less efficient in evaluating method performance (in particular
 > Evaluation of methods should be done using, preferably a large, test dataset.
 This is the easiest and most robust way to make sure we are evaluating the expectation over $P$.
 
-The following do not perform such evalutions, but attempts at discussing and motivating methods through knowledge of 
+The following do not perform such evalutions, but attempts at discussing and motivating methods through knowledge of
 statistical methodology, in context of point 2, conditioned on the sizes of $p$ and $n$.
 This involves drawing on knowledge from information criteria, the bias-variance trade-off, and regularization techniques.
 No definite answers on what is the best method is given here.
@@ -360,7 +360,7 @@ Define $y=h(x)$, possibly non-linear, and $d=y+\epsilon$ where $\epsilon\sim N(0
 and $\Sigma_{\epsilon})$ is assumed diagonal.
 
 We have an observation vector, say $d^\ast$.
-We have a sample of $x$'s, say $x_i$, that we pass through $y$ to get a corresponding sample of $y_i$'s, and then 
+We have a sample of $x$'s, say $x_i$, that we pass through $y$ to get a corresponding sample of $y_i$'s, and then
 sample some $\epsilon_i$'s appropriately so that we have samples $(x_i,y_i,d_i)$.
 The goal is to use these samples to learn the best possible $\hat{K}$ to transport the samples $(x_i,d_i)$ to a sample, sampled from a distribution as close as possible to $x\sim p(x_i|d^\ast)$.
 
@@ -382,8 +382,8 @@ This therefore provides guidance in developing estimates of K.
 
 ### Ensemble smoother
 
-The Ensemble Smoother (ES) is developed through 
-1. Sample covariance matrices $`\hat{\Sigma}_{xy}`$, $`\hat{\Sigma}_{y}`$ converges to the population quantities at an infinite ensemble size. 
+The Ensemble Smoother (ES) is developed through
+1. Sample covariance matrices $`\hat{\Sigma}_{xy}`$, $`\hat{\Sigma}_{y}`$ converges to the population quantities at an infinite ensemble size.
 2. Find $`\hat{\Sigma}_{d}=\hat{\Sigma}_y + \Sigma_{\epsilon}`$ which is guaranteed SPD.
 3. Solve $`\hat{K}=\hat{\Sigma}_{xy}\hat{\Sigma}_{d}^{-1}`$
 
@@ -400,7 +400,7 @@ The sample cross-covariance $`\hat{\Sigma}_{xy}`$ is the sample-covariance $`\ha
 
 ### Adaptive localization: correlation-based model selection
 
-Recognizing spurious correlations. 
+Recognizing spurious correlations.
 Recognizing sampling distribution of spurious correlations.
 Do automatic model selection between LS regressions in $x$ and $y$.
 Improves estimates Kalman gain. Less degrees of freedom used.
@@ -416,7 +416,7 @@ So update encoded in Kalman gain should be zero if $d_j$ and $x_k$ are far away 
 
 ### Linear least squares
 
-The LLS Kalman gain estimate (NORCE slides) is 
+The LLS Kalman gain estimate (NORCE slides) is
 
 $$
 \hat{K} = X^TD(D^TD)^{-1}
@@ -426,16 +426,16 @@ It is both a solution from fiding the MLE estimates (if $n>p$) for the full cova
 or from solving the LS objective on $X-KD$.
 As noted earlier, these produce the same estimator here.
 
-- Does not use any prior knowledge of structure of the problem 
+- Does not use any prior knowledge of structure of the problem
 - No regularization of the likelihood objective or LS objective.
 
 Since this estimator has the propertis of LLS, we know it is unbiased asymptotically.
-But, when the Gauss-Markov conditions are not satisfied, which they are _not_ due to prior correlation in the prior of $x$, 
+But, when the Gauss-Markov conditions are not satisfied, which they are _not_ due to prior correlation in the prior of $x$,
 then the estimator is not the minimum variance estimator.
 
 It provides insight into that estimators of $\hat{K}$ can be produced through the LS objective on $X-KD$, which can be separated on the dimensions of $x$.
 
-In a comparison to e.g. ES, the difference lies in its uninformed (implied) sample estimate $\hat{\Sigma}_d$. 
+In a comparison to e.g. ES, the difference lies in its uninformed (implied) sample estimate $\hat{\Sigma}_d$.
 The discrepancy from ES, and a poorer estimate, increaess in the dimension of $d$, and thus the number of obervations.
 
 
@@ -462,14 +462,14 @@ Derivations with scaling should maybe be produced, again.
 
 Ideally we would like to encode all the structure that is known a-priori.
 Furthermore, we prefer doing the bias-variance trade-off over purely BLUE estimators, because evaluation on test-data is our target.
-EnIF allows encoding all (or none of) the information 
+EnIF allows encoding all (or none of) the information
 
 - $d=y+\epsilon$
 - $\Sigma_{\epsilon}$ is known
 - $H$ is possibly known
 - $\Sigma_x$ is possibly known, or at least non-zeroes $\Sigma_x^{-1}$ are known
 
-If non-zeroes $\Sigma_x^{-1}$ are not known, they provide a powerful parsimoneous model-selection tool even when 
+If non-zeroes $\Sigma_x^{-1}$ are not known, they provide a powerful parsimoneous model-selection tool even when
 $\Sigma_x^{-1}$ is dense.
 
 Solutions of $H$ is found through LASSO on $Y-HX$.
