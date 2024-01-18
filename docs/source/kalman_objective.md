@@ -16,7 +16,9 @@ From the contents, it should however be clear how a simulation study could be co
 
 ## Gaussian conditional transport
 
-Let $x$ and $y$ be random variables with a joint multivariate Gaussian given by mean and covariance
+### Introduction
+
+Let $x$ and $y$ be random variables with a joint multivariate Gaussian distribution:
 
 $$
 \begin{bmatrix}
@@ -32,65 +34,75 @@ y
 \end{bmatrix}\right)
 $$
 
-Define the "Kalman gain" as
+We define the "Kalman gain" as the matrix
 
 $$
 K = \Sigma_{xy}\Sigma_{y}^{-1}.
 $$
 
-Then, a multivariate sample $(x_i,y_i)$ is _transported_ to a sample from the conditional
-$p(x|y)$, having observed $y$ as such, via the formula
+Suppose we have a joint sample $(x_i,y_i)$ from $p(x, y)$, and we observe the value of $y$.
+The joint sample from $p(x, y)$ is then _transported_ to a sample from the conditional $p(x|y)$ via the formula
 
 $$
 x_i + K(y-y_i) \sim p(x|y).
 $$
 
-Note that $x|y$ retains Gaussianity as
+Note that if $p(x, y)$ is Gaussian, then the conditional $p(x | y)$ is also Gaussian with distribution
 
 $$
 x | y \sim \mathcal{N}(\mu_x + K(y - \mu_y), \Sigma_{x} - K \Sigma_{yx}).
 $$
 
-For any distribution having a bijection between (the informative parts of)
-$x$ and $y$, there exist a similar mapping, transporting a sample $(x,y)$ to $x|y$.
-The EnKF and ES variants follows from writing $y=d=Hx+\epsilon$ where
-$\epsilon\sim \mathcal{N}(0,\Sigma_{\epsilon})$, thus $\Sigma_y=H\Sigma_xH^T+\Sigma_{\epsilon}$.
-Note that $y$ is common to use as $y=Hx$ but this is not the case in the preliminaries here.
-A point of confusion is that it is indeed _not_ the observation $d$ that is "perturbed" with noise,
-but rather, $d$ has variance $H\Sigma_xH^T+\Sigma_{\epsilon}$ and an $\epsilon$ is then added to the response $Hx$ to correctly sample from this distribution of $d$.
-Because both $(d-d_i)$ and $d_i=Hx_i+\epsilon_i$ are additive, and $\epsilon$ is symmetric about 0, it does not matter if we add the noise to $d$ or to $Hx$ in the expression.
-If any of these points were different, it would be evident that we are not perturbing observations.
-Thus, it is incorrect and slightly confusing to say that we perturb the observations.
-It is correct to say that we sample from the distribution of $d$, accounting from both prior uncertainty _and_ observation uncertainty.
+See for instance [Section 8.1.3 in the Matrix Cookbook](https://www.math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf).
 
-Note that the EnKF and ES is intended to work (and indeed do) when $d=h(x)+\epsilon$
-for some non-linear $h$.
+### ES and EnKF
+
+For any distribution having a bijection between (the informative parts of) $x$ and $y$, there exist a similar mapping, transporting a sample $(x,y)$ to $x|y$.
+The EnKF and ES variants follow from writing $y=d=Hx+\epsilon$, where
+$\epsilon \sim \mathcal{N} (0, \Sigma_{\epsilon})$, thus $\Sigma_y= H\Sigma_xH^T + \Sigma_{\epsilon}$.
+This can de derived from the equations in [Section 8.2 in the Matrix Cookbook](https://www.math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf).
+Note that in the ES literature, $y$ is often used to denote $Hx$, but in this section $y=d=Hx+\epsilon$.
+
+A point of confusion is that it is not the observation $d$ that is "perturbed" with noise.
+Rather, the observation $d$ has variance $H \Sigma_x H^T + \Sigma_{\epsilon}$, so an $\epsilon$ is then added to the response $Hx$ to correctly sample from the distribution of $d$.
+
+Because both $(d-d_i)$ and $d_i=Hx_i+\epsilon_i$ are additive, and $\epsilon$ is symmetric about $0$, it does not matter if we add the noise to $d$ or to $Hx$ in the expression $(d-d_i)$.
+If any of these points were different, it would be evident that we are not perturbing observations.
+It is _incorrect_ to say that we perturb the observations.
+It is _correct_ to say that we sample from the distribution of $d$, accounting from both prior parameter uncertainty $H \Sigma_x H^T$ _and_ observation uncertainty $\Sigma_{\epsilon}$.
+
+### Using the first two moments
+
+The EnKF and ES is intended to work when $d=h(x)+\epsilon$ for some non-linear $h$.
 The joint system is then _not_ Gaussian, and we have no $H$ and no immediate $K$.
 It turns out that the Gaussian conditional transport makes sense in a general setting,
 where the true distribution on $(x,y)$ is unknown and must be (implicitly) estimated from data.
-When approximating it with the two
-first moments (mean and covariance) seeking to minimize information loss, we arrive
-at the Gaussian.
-This could be expected by remembering that the Gaussian is the maximum entropy distribution when the two first moments are known. It does not encode any other information in the distribution.
-The Gaussian transport using the Kalman gain above then follows.
+
+If we approximate the distribution of $(x, y)$ with the two first moments (mean and covariance) and seek to minimize information loss, we arrive at the Gaussian.
+This is because the Gaussian is the maximum entropy distribution when the two first moments are known, see e.g. [wikipedia](https://en.wikipedia.org/wiki/Maximum_entropy_probability_distribution).
+The Gaussian does not encode any other information in the distribution.
+Choosing the use the first two moments, the Gaussian transport using the Kalman gain above then follows.
+Information beyond the first two moments are lost.
+In summary, EnKF and ES work well in the sense that they capture the first two moments of the distribution, but they offer no other guarantees when $h$ is non-linear.
 
 The details of minimizing information loss, and how to compare estimates of $K$ (belonging to different models) are explained below.
 
 
-## Minimize model information-loss: KLD
+## Minimizing model information-loss: KLD
 
-We seek to estimate the optimal transport function, that takes a sample $(x,y)$ to a conditional marginal sample $x|y$.
+We seek to estimate the optimal transport function, that takes a sample $(x,y)$ to a conditional marginal sample $x|y$ (the posterior).
 Such a transport implies a joint model-distribution on $(x,y)$.
-The objective is to learn the transport, corresponding to a model distribution on $(x,y)$, say $Q$, from a training dataset generated from the true distribution, say $P$.
+
+The objective is to learn the transport, corresponding to a model distribution $Q$ on $(x,y)$, from a training dataset generated from the true distribution $P$.
 "Optimal" transport to a posterior sample therefore needs an objective on how far away the model distribution is from the true distribution, in particular when the true underlying distribution is unknown.
 
 We want to minimize information loss by modelling data $(x,y)$,
 drawn from true data generating distribution $P$, with the "model" distribution $Q$.
-The $Q$ minimizing Kullback-Leibler-Divergence (KLD) is the distribution that does this.
+The distribution $Q$ that minimizes the [Kullback-Leibler divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence) (KLD) achieves this.
 The KLD is given by
 
 $$
-D_{KL}(P \parallel Q) = \int \int p(x, y) \log\left(\frac{p(x, y)}{q(x, y)}\right) dx dy.
+D_{KL}(P \parallel Q) = \int \int p(x, y) \log\left(\frac{p(x, y)}{q(x, y)}\right) \, dx dy.
 $$
 
 Note two formulas:
@@ -103,27 +115,27 @@ $$
 D_{KL}(P(x, y) \parallel Q(x, y)) = D_{KL}(P(y) \parallel Q(y)) + E_{P(y)}\left[D_{KL}(P(x | y) \parallel Q(x | y))\right]
 $$
 
-2. The relative Kullback-Leibler Divergence (KLD) between two distributions
-$P$ and $Q$ is given by:
+2. The KLD between two distributions $P$ and $Q$ may also be written as:
 
 $$
 D_{KL}(P \parallel Q) = E_P[\log(P)] - E_P[\log(Q)]
 $$
 
-Dropping the first term, which is constant with respect to the model
-$Q$, and retaining the negative of the latter term gives us the objective of maximizing the likelihood (or minimizing the negative log-likelihood) of $Q$:
+We may drop the first term, since it is constant with respect to the model $Q$.
+The remaining latter term gives us the objective of maximizing the likelihood (or minimizing the negative log-likelihood) of $Q$:
 
 $$
 -E_P[\log(Q)]
 $$
 
-This is the core for all of maximum likelihood estimation, information criteria, and regression and supervised learning using a negative log-likelihood as its loss function.
+This is the core of all of maximum likelihood estimation, information criteria, regression and supervised learning that use a negative log-likelihood as its loss function.
 
 ### Why EnKF and ES works so well
 
-Let $(x,y)\sim P$ possibly non-Gaussian and assume we have a finite dataset to infer a model $Q$ from.
-Arguably, the most important aspects to encode in $Q$, without any other knowledge, are
+Let $(x,y)\sim P$ be possibly non-Gaussian and assume we have a finite dataset to infer a model $Q$ from.
+Arguably the most important aspects to encode in $Q$, without any other knowledge, are
 the two first moments of $P$.
+
 Having access to the sample covariances of
 $\Sigma_{xy}$
 and $\Sigma_{y}^{-1}$
