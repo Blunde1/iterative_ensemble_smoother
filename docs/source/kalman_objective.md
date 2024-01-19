@@ -16,7 +16,9 @@ From the contents, it should however be clear how a simulation study could be co
 
 ## Gaussian conditional transport
 
-Let $x$ and $y$ be random variables jointly multivariate Gaussian with mean and covariance
+### Introduction
+
+Let $x$ and $y$ be random variables with a joint multivariate Gaussian distribution:
 
 $$
 \begin{bmatrix}
@@ -32,70 +34,80 @@ y
 \end{bmatrix}\right)
 $$
 
-Define the "Kalman gain" as
+We define the "Kalman gain" as the matrix
 
 $$
 K = \Sigma_{xy}\Sigma_{y}^{-1}.
 $$
 
-Then, a multivariate sample $(x_i,y_i)$ is _transported_ to a sample from the conditional
-$p(x|y)$, having observed $y$ as such, via the formula 
+Suppose we have a joint sample $(x_i,y_i)$ from $p(x, y)$, and we observe the value of $y$.
+The joint sample from $p(x, y)$ is then _transported_ to a sample from the conditional $p(x|y)$ via the formula
 
 $$
 x_i + K(y-y_i) \sim p(x|y).
 $$
 
-Note that $x|y$ retains Gaussianity as
+Note that if $p(x, y)$ is Gaussian, then the conditional $p(x | y)$ is also Gaussian with distribution
 
 $$
 x | y \sim \mathcal{N}(\mu_x + K(y - \mu_y), \Sigma_{x} - K \Sigma_{yx}).
 $$
 
-For any distribution having a bijection between (the informative parts of) 
-$x$ and $y$, there exist a similar mapping, transporting a sample $(x,y)$ to $x|y$.
-The EnKF and ES variants follows from writing $y=d=Hx+\epsilon$ where 
-$\epsilon\sim \mathcal{N}(0,\Sigma_{\epsilon})$, thus $\Sigma_y=H\Sigma_xH^T+\Sigma_{\epsilon}$.
-Note that $y$ is common to use as $y=Hx$ but this is not the case in the preliminaries here.
-A point of confusion is that it is indeed _not_ the observation $d$ that is "perturbed" with noise,
-but rather, $d$ has variance $H\Sigma_xH^T+\Sigma_{\epsilon}$ and an $\epsilon$ is then added to the response $Hx$ to correctly sample from this distribution of $d$.
-Because both $(d-d_i)$ and $d_i=Hx_i+\epsilon_i$ are additive, and $\epsilon$ is symmetric about 0, it does not matter if we add the noise to $d$ or to $Hx$ in the expression.
-If any of these points were different, it would be evident that we are not perturbing observations.
-Thus, it is incorrect and slightly confusing to say that we perturb the observations.
-It is correct to say that we sample from the distribution of $d$, accounting from both prior uncertainty _and_ observation uncertainty.
+See for instance [Section 8.1.3 in the Matrix Cookbook](https://www.math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf).
 
-Note that the EnKF and ES is intended to work (and indeed do) when $d=h(x)+\epsilon$
-for some non-linear $h$.
+### ES and EnKF
+
+For any distribution having a bijection between (the informative parts of) $x$ and $y$, there exist a similar mapping, transporting a sample $(x,y)$ to $x|y$.
+The EnKF and ES variants follow from writing $y=d=Hx+\epsilon$, where
+$\epsilon \sim \mathcal{N} (0, \Sigma_{\epsilon})$, thus $\Sigma_y= H\Sigma_xH^T + \Sigma_{\epsilon}$.
+This can de derived from the equations in [Section 8.2 in the Matrix Cookbook](https://www.math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf).
+Note that in the ES literature, $y$ is often used to denote $Hx$, but in this section $y=d=Hx+\epsilon$.
+
+A point of confusion is that it is not the observation $d$ that is "perturbed" with noise.
+Rather, the observation $d$ has variance $H \Sigma_x H^T + \Sigma_{\epsilon}$, so an $\epsilon$ is then added to the response $Hx$ to correctly sample from the distribution of $d$.
+
+Because both $(d-d_i)$ and $d_i=Hx_i+\epsilon_i$ are additive, and $\epsilon$ is symmetric about $0$, it does not matter if we add the noise to $d$ or to $Hx$ in the expression $(d-d_i)$.
+If any of these points were different, it would be evident that we are not perturbing observations.
+It is _incorrect_ to say that we perturb the observations.
+It is _correct_ to say that we sample from the distribution of $d$, accounting for both prior parameter uncertainty $H \Sigma_x H^T$ _and_ observation uncertainty $\Sigma_{\epsilon}$.
+
+### Using the first two moments
+
+The EnKF and ES is intended to work when $d=h(x)+\epsilon$ for some non-linear $h$.
 The joint system is then _not_ Gaussian, and we have no $H$ and no immediate $K$.
 It turns out that the Gaussian conditional transport makes sense in a general setting,
 where the true distribution on $(x,y)$ is unknown and must be (implicitly) estimated from data.
-When approximating it with the two
-first moments (mean and covariance) seeking to minimize information loss, we arrive
-at the Gaussian.
-This could be expected by remembering that the Gaussian is the maximum entropy distribution when the two first moments are known. It does not encode any other information in the distribution.
-The Gaussian transport using the Kalman gain above then follows.
+
+If we approximate the distribution of $(x, y)$ with the two first moments (mean and covariance) and seek to minimize information loss, we arrive at the Gaussian.
+This is because the Gaussian is the maximum entropy distribution when the two first moments are known, see e.g. [wikipedia](https://en.wikipedia.org/wiki/Maximum_entropy_probability_distribution).
+The Gaussian does not encode any other information in the distribution.
+Choosing the use the first two moments, the Gaussian transport using the Kalman gain above then follows.
+Information beyond the first two moments are lost.
+In summary, EnKF and ES work well in the sense that they capture the first two moments of the distribution, but they offer no other guarantees when $h$ is non-linear.
 
 The details of minimizing information loss, and how to compare estimates of $K$ (belonging to different models) are explained below.
 
 
-## Minimize model information-loss: KLD
+## Minimizing model information-loss: KLD
 
-We seek to estimate the optimal transport function, that takes a sample $(x,y)$ to a conditional marginal sample $x|y$.
+We seek to estimate the optimal transport function, that takes a sample $(x,y)$ to a conditional marginal sample $x|y$ (the posterior).
 Such a transport implies a joint model-distribution on $(x,y)$.
-The objective is to learn the transport, corresponding to a model distribution on $(x,y)$, say $Q$, from a training dataset generated from the true distribution, say $P$.
+
+The objective is to learn the transport, corresponding to a model distribution $Q$ on $(x,y)$, from a training dataset generated from the true distribution $P$.
 "Optimal" transport to a posterior sample therefore needs an objective on how far away the model distribution is from the true distribution, in particular when the true underlying distribution is unknown.
 
 We want to minimize information loss by modelling data $(x,y)$,
 drawn from true data generating distribution $P$, with the "model" distribution $Q$.
-The $Q$ minimizing Kullback-Leibler-Divergence (KLD) is the distribution that does this.
+The distribution $Q$ that minimizes the [Kullback-Leibler divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence) (KLD) achieves this.
 The KLD is given by
 
 $$
-D_{KL}(P \parallel Q) = \int \int p(x, y) \log\left(\frac{p(x, y)}{q(x, y)}\right) dx dy.
+D_{KL}(P \parallel Q) = \int \int p(x, y) \log\left(\frac{p(x, y)}{q(x, y)}\right) \, dx dy.
 $$
 
 Note two formulas:
 
-1. Information is additive, and we may decompose the KLD as 
+1. Information is additive, and we may decompose the KLD as
 the KLD over the marginal and the expected conditional KLD w.r.t. the variable considered in the marginal.
 The optimization can be done disjoint if marginal and conditional marginal depend upon disjoint parameter-sets.
 
@@ -103,35 +115,35 @@ $$
 D_{KL}(P(x, y) \parallel Q(x, y)) = D_{KL}(P(y) \parallel Q(y)) + E_{P(y)}\left[D_{KL}(P(x | y) \parallel Q(x | y))\right]
 $$
 
-2. The relative Kullback-Leibler Divergence (KLD) between two distributions 
-$P$ and $Q$ is given by:
+2. The KLD between two distributions $P$ and $Q$ may also be written as:
 
 $$
 D_{KL}(P \parallel Q) = E_P[\log(P)] - E_P[\log(Q)]
 $$
 
-Dropping the first term, which is constant with respect to the model 
-$Q$, and retaining the negative of the latter term gives us the objective of maximizing the likelihood (or minimizing the negative log-likelihood) of $Q$:
+We may drop the first term, since it is constant with respect to the model $Q$.
+The remaining latter term gives us the objective of maximizing the likelihood (or minimizing the negative log-likelihood) of $Q$:
 
 $$
 -E_P[\log(Q)]
 $$
 
-This is the core for all of maximum likelihood estimation, information criteria, and regression and supervised learning using a negative log-likelihood as its loss function.
+This is the core of all of maximum likelihood estimation, information criteria, regression and supervised learning that use a negative log-likelihood as its loss function.
 
-### Why EnKF and ES works so well
+### Why EnKF and ES work so well
 
-Let $(x,y)\sim P$ possibly non-Gaussian and assume we have a finite dataset to infer a model $Q$ from.
-Arguably, the most important aspects to encode in $Q$, without any other knowledge, are 
+Let $(x,y)\sim P$ be possibly non-Gaussian and assume we have a finite dataset to infer a model $Q$ from.
+Arguably the most important aspects to encode in $Q$, without any other knowledge, are
 the two first moments of $P$.
-Having access to the sample covariances of
-$\Sigma_{xy}$
-and $\Sigma_{y}^{-1}$
-after (maximum likelihood when $n>p$) estimation (minimizing empiricla KLD), the distribution $Q$ minimizing KLD towards $P$ is the Gaussian.
-Then the Gaussian conditional transport function using Kalman gain follows.
-Therefore EnKF and ES are not just something that works in the linear-Gaussian case.
 
-### Optimizing empirical KLD: Training-loss VS. test-loss
+Assume that we have access to the sample covariances of $\Sigma_{xy}$ and $\Sigma_{y}^{-1}$.
+These can be estimated using maximum likelihood when the number of samples $n$ is larger than the number of parameters $p$.
+[QUESTION: why the condition that n > p? can't i estimate a covariance matrix p < n too]
+
+EnKF and ES work well because they assume a Gaussian, which matches the first two moments.
+Choosing $Q$ to be a multivariate Gaussian is often a good approximation to the arbitrary $P$, but EnKF and ES offer no theoretical guarantees expect in the Gauss-Linear case (multivariate Gaussian $P$ and linear model $h$).
+
+### Optimizing empirical KLD: Training-loss vs. test-loss
 
 The objective is the KLD from $Q$ to $P$.
 If we have minimized the empirical KLD, w.r.t. a parametrization $\theta$ of $Q$ using a training dataset of $(x,y)$,
@@ -140,6 +152,7 @@ the KLD objective (but using a new test loss would be).
 In particular, the bias is a random variable, but its expectation is positive, so that the training loss is expected to be smaller than the expected test loss.
 Furthermore, the expectation of the bias is an increasing function of the dimensionality of $\theta$, or more precisely the number of degrees of freedom in the statistical estimation / parametrization of $Q$.
 The expected bias is decreasing in ensemble/sample size.
+[QUESTION: the above paragraph is very hard to read. to me this is a sequence of statements without any proofs or help with intuition for why this is true. are you tryin to say that we should not evaluate on the training set?]
 
 To alleviate this we can either adjust for the expectation in the bias, or just pass through a test-set not seen in the fitting of $\theta$.
 The latter does not require advanced use of theory (information criteria), and is an "obvious" thing to do.
@@ -148,25 +161,31 @@ Thus, using a test dataset, we would like to evaluate different models $Q$, perf
 
 ## Objectives for Kalman-type ensembles
 
-When constraining $Q$ to only encode information on the two first moments, that are learned from data, the KLD
-approach yields a Gaussian distribution $Q$ even when $P$ is non-Gaussian.
-We call methods using the Kalman-gain in Gaussian transport from prior to posterior as "Kalman-type" ensemble based data assimilation methods.
+Independently of the model distribution $P$, if we choose to only encode information about the two first moments in $Q$ (mean and covariance), then the Gaussian is the maximum entropy distribution.
+
+We will call methods that use the Kalman-gain in Gaussian transport from prior to posterior as "Kalman-type" ensemble based data assimilation methods.
+[QUESTION: are there any methods that do "gaussian transport" that do not use a kalman gain?]
 They implicitly seek to minimize information loss in this transport.
-Different Kalman-type modelling approaches essentially yields different estimates of the Kalman-gain, $K$.
-The following discuss how to evaluate (on some objective, using unseen test-data)
-which Kalman-gains are superior to others.
+
+Different Kalman-type modelling approaches essentially yields different estimates of the Kalman-gain $K = \Sigma_{xy}\Sigma_{y}^{-1}$.
+For instance, one approach could be to estimate $\Sigma_{xy}$ and $\Sigma_{y}$ directly.
+Another approach might be to regularize the matrices, or to write $\Sigma_{y} = H \Sigma_x H^T + \Sigma_{\epsilon}$ and estimate $H$ and $\Sigma_x$.
+Many approaches are possible.
+
+The following discuss how to evaluate (on some objective, using unseen test-data) which Kalman-gains are superior to others.
 This turns out to be non-trivial for several common applications like the EnKF/ES due to implicit singular covariance estimates.
 
 
 ### Joint-Gaussian
+
 The KLD approach suggests $-E_P[\log(Q)]$ as the objective of fitting $Q$.
-Taking $Q$ to be multivariate Gaussian, we arrive at the negative log-likelihood for a sample
+Taking $Q$ to be a multivariate Gaussian, we arrive at the negative log-likelihood for a sample
 
 $$
--\log p(x, y) = \frac{1}{2} \log \left| \begin{bmatrix}
+-\log p(x, y) = \frac{1}{2} \log \lVert \begin{bmatrix}
 \Sigma_{x} & \Sigma_{xy} \\
 \Sigma_{yx} & \Sigma_{y}
-\end{bmatrix} \right| + \frac{k}{2} \log(2\pi) + \frac{1}{2} \begin{bmatrix}
+\end{bmatrix} \rVert + \frac{k}{2} \log(2\pi) + \frac{1}{2} \begin{bmatrix}
 x - \mu_x \\
 y - \mu_y
 \end{bmatrix}^T \begin{bmatrix}
@@ -178,14 +197,16 @@ y - \mu_y
 \end{bmatrix}
 $$
 
-and the negative log-likelihood 
+and the negative log-likelihood
 
 $$
 -\frac{1}{n}\sum_i \log(p(x_i,y_i))
 $$
 
 as an estimator of $-E_P[\log(Q)]$, suitable for fitting procedures.
+
 It may also be used for evaluation of different models, as long as the sample $(x_i,y_i)$ is not used to optimize $\theta$ parametrizing $Q$.
+
 This means we may use the same formula, but with a different test-set of samples.
 This is a natural objective if explicit estimates of $\Sigma_{x}$, $\Sigma_{xy}$, and $\Sigma_{y}$ are computed in creating
 an estimate $K=\Sigma_{xy}\Sigma_{y}^{-1}$.
@@ -194,15 +215,20 @@ for instance  $\Sigma_y=H\Sigma_xH^T+\Sigma_{\epsilon}$. Then only $\Sigma_x$ an
 It could also be that $\Sigma_x$ is diagonal, or is a function of some $\theta$ in a smaller dimensional space.
 We would then require fewer degrees of freedom to fit $\Sigma_x(\theta)$.
 
-Note that if covariance estimates are singular (i.e. EnKF when $p>n$) then this objective cannot be used due to the log-determinant and covariance inverse.
-Furthermore, we often only have access to the final estimate of the Kalman-gain, not the full covariance structure.
+An algorithm for evaluating the objective is sketched below:
+
+1. Generate training samples from the model distribution $P$
+2. Use the samples to find $\theta$ (mean and covariance) parametrizing $Q$
+3. Generate test samples from $P$ and evaluate $-\frac{1}{n}\sum_i \log(p(x_i,y_i))$, where the samples $(x_i,y_i)$ are from the test set, but the parameters $\theta$ that determine $p(x, y)$ were inferred using the training samples
+
+If the covariance estimates are singular (i.e. EnKF when $p>n$) then this objective cannot be used due to the log-determinant and covariance inverse.
+Furthermore, we often only have access to the final estimate of the Kalman-gain $K$, not the full covariance structure.
 
 ### Gaussian conditional marginal
 
 The joint KLD is a natural objective to evaluate model performance on.
-However, multiple (Kalman) ensemble methods only produce an estiamte $K$ either explicit or explicit,
-without specifying the full covariance structure.
-In such cases, the following objective, that still aligns with the joint-likelihood, is a natural objective.
+However, some Kalman ensemble methods produce an estimate $K$ without specifying the full covariance structure, i.e., without specifying $\Sigma_{x}$, $\Sigma_{xy}$, and $\Sigma_{y}$.
+In such cases, the following is a natural natural objective that still aligns with the joint-likelihood.
 It evaluates the model posterior using samples from the optimal posterior, and averaging over
 the conditioning variable $y$.
 
@@ -216,7 +242,7 @@ In spoken language, this means the negative log-likelihood for the conditional,
 and the conditioning variable $y$ is sampled from its true distribution and then averaged over.
 
 A Kalman-type method estimating a model Kalman-gain, say $\hat{K}$, transports samples $(x_i,y_i)$
-according to 
+according to
 $x_i^\ast =x_i + \hat{K} (y-y_i)$ which is Gaussian with mean and covariance
 
 $$
@@ -308,7 +334,7 @@ It is offset in the exact way so that we arrive at LLS, which we _know_ is ineff
 
 It is possible to now err and reason that due to arriving at the same stimator, the LS and Gaussian-NLL objectives are equivalent.
 This is, however false.
-It is rather that in this particular case, when we have failed to inform of structure in dependence, 
+It is rather that in this particular case, when we have failed to inform of structure in dependence,
 then the Gaussian-NLL arrives at the same inefficient LLS estimator.
 We know that the LLS estimator is inefficient when Gauss-Markov conditions are not satisfied.
 And we know that this is because the LS objective then does not appropriately target dependence.
@@ -344,7 +370,7 @@ But are generally less efficient in evaluating method performance (in particular
 > Evaluation of methods should be done using, preferably a large, test dataset.
 This is the easiest and most robust way to make sure we are evaluating the expectation over $P$.
 
-The following do not perform such evalutions, but attempts at discussing and motivating methods through knowledge of 
+The following do not perform such evalutions, but attempts at discussing and motivating methods through knowledge of
 statistical methodology, in context of point 2, conditioned on the sizes of $p$ and $n$.
 This involves drawing on knowledge from information criteria, the bias-variance trade-off, and regularization techniques.
 No definite answers on what is the best method is given here.
@@ -360,7 +386,7 @@ Define $y=h(x)$, possibly non-linear, and $d=y+\epsilon$ where $\epsilon\sim N(0
 and $\Sigma_{\epsilon})$ is assumed diagonal.
 
 We have an observation vector, say $d^\ast$.
-We have a sample of $x$'s, say $x_i$, that we pass through $y$ to get a corresponding sample of $y_i$'s, and then 
+We have a sample of $x$'s, say $x_i$, that we pass through $y$ to get a corresponding sample of $y_i$'s, and then
 sample some $\epsilon_i$'s appropriately so that we have samples $(x_i,y_i,d_i)$.
 The goal is to use these samples to learn the best possible $\hat{K}$ to transport the samples $(x_i,d_i)$ to a sample, sampled from a distribution as close as possible to $x\sim p(x_i|d^\ast)$.
 
@@ -382,8 +408,8 @@ This therefore provides guidance in developing estimates of K.
 
 ### Ensemble smoother
 
-The Ensemble Smoother (ES) is developed through 
-1. Sample covariance matrices $`\hat{\Sigma}_{xy}`$, $`\hat{\Sigma}_{y}`$ converges to the population quantities at an infinite ensemble size. 
+The Ensemble Smoother (ES) is developed through
+1. Sample covariance matrices $`\hat{\Sigma}_{xy}`$, $`\hat{\Sigma}_{y}`$ converges to the population quantities at an infinite ensemble size.
 2. Find $`\hat{\Sigma}_{d}=\hat{\Sigma}_y + \Sigma_{\epsilon}`$ which is guaranteed SPD.
 3. Solve $`\hat{K}=\hat{\Sigma}_{xy}\hat{\Sigma}_{d}^{-1}`$
 
@@ -400,7 +426,7 @@ The sample cross-covariance $`\hat{\Sigma}_{xy}`$ is the sample-covariance $`\ha
 
 ### Adaptive localization: correlation-based model selection
 
-Recognizing spurious correlations. 
+Recognizing spurious correlations.
 Recognizing sampling distribution of spurious correlations.
 Do automatic model selection between LS regressions in $x$ and $y$.
 Improves estimates Kalman gain. Less degrees of freedom used.
@@ -416,7 +442,7 @@ So update encoded in Kalman gain should be zero if $d_j$ and $x_k$ are far away 
 
 ### Linear least squares
 
-The LLS Kalman gain estimate (NORCE slides) is 
+The LLS Kalman gain estimate (NORCE slides) is
 
 $$
 \hat{K} = X^TD(D^TD)^{-1}
@@ -426,16 +452,16 @@ It is both a solution from fiding the MLE estimates (if $n>p$) for the full cova
 or from solving the LS objective on $X-KD$.
 As noted earlier, these produce the same estimator here.
 
-- Does not use any prior knowledge of structure of the problem 
+- Does not use any prior knowledge of structure of the problem
 - No regularization of the likelihood objective or LS objective.
 
 Since this estimator has the propertis of LLS, we know it is unbiased asymptotically.
-But, when the Gauss-Markov conditions are not satisfied, which they are _not_ due to prior correlation in the prior of $x$, 
+But, when the Gauss-Markov conditions are not satisfied, which they are _not_ due to prior correlation in the prior of $x$,
 then the estimator is not the minimum variance estimator.
 
 It provides insight into that estimators of $\hat{K}$ can be produced through the LS objective on $X-KD$, which can be separated on the dimensions of $x$.
 
-In a comparison to e.g. ES, the difference lies in its uninformed (implied) sample estimate $\hat{\Sigma}_d$. 
+In a comparison to e.g. ES, the difference lies in its uninformed (implied) sample estimate $\hat{\Sigma}_d$.
 The discrepancy from ES, and a poorer estimate, increaess in the dimension of $d$, and thus the number of obervations.
 
 
@@ -462,14 +488,14 @@ Derivations with scaling should maybe be produced, again.
 
 Ideally we would like to encode all the structure that is known a-priori.
 Furthermore, we prefer doing the bias-variance trade-off over purely BLUE estimators, because evaluation on test-data is our target.
-EnIF allows encoding all (or none of) the information 
+EnIF allows encoding all (or none of) the information
 
 - $d=y+\epsilon$
 - $\Sigma_{\epsilon}$ is known
 - $H$ is possibly known
 - $\Sigma_x$ is possibly known, or at least non-zeroes $\Sigma_x^{-1}$ are known
 
-If non-zeroes $\Sigma_x^{-1}$ are not known, they provide a powerful parsimoneous model-selection tool even when 
+If non-zeroes $\Sigma_x^{-1}$ are not known, they provide a powerful parsimoneous model-selection tool even when
 $\Sigma_x^{-1}$ is dense.
 
 Solutions of $H$ is found through LASSO on $Y-HX$.
