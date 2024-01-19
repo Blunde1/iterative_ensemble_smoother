@@ -130,20 +130,20 @@ $$
 
 This is the core of all of maximum likelihood estimation, information criteria, regression and supervised learning that use a negative log-likelihood as its loss function.
 
-### Why EnKF and ES works so well
+### Why EnKF and ES work so well
 
 Let $(x,y)\sim P$ be possibly non-Gaussian and assume we have a finite dataset to infer a model $Q$ from.
 Arguably the most important aspects to encode in $Q$, without any other knowledge, are
 the two first moments of $P$.
 
-Having access to the sample covariances of
-$\Sigma_{xy}$
-and $\Sigma_{y}^{-1}$
-after (maximum likelihood when $n>p$) estimation (minimizing empiricla KLD), the distribution $Q$ minimizing KLD towards $P$ is the Gaussian.
-Then the Gaussian conditional transport function using Kalman gain follows.
-Therefore EnKF and ES are not just something that works in the linear-Gaussian case.
+Assume that we have access to the sample covariances of $\Sigma_{xy}$ and $\Sigma_{y}^{-1}$.
+These can be estimated using maximum likelihood when the number of samples $n$ is larger than the number of parameters $p$.
+[QUESTION: why the condition that n > p? can't i estimate a covariance matrix p < n too]
 
-### Optimizing empirical KLD: Training-loss VS. test-loss
+EnKF and ES work well because they assume a Gaussian, which matches the first two moments.
+Choosing $Q$ to be a multivariate Gaussian is often a good approximation to the arbitrary $P$, but EnKF and ES offer no theoretical guarantees expect in the Gauss-Linear case (multivariate Gaussian $P$ and linear model $h$).
+
+### Optimizing empirical KLD: Training-loss vs. test-loss
 
 The objective is the KLD from $Q$ to $P$.
 If we have minimized the empirical KLD, w.r.t. a parametrization $\theta$ of $Q$ using a training dataset of $(x,y)$,
@@ -152,6 +152,7 @@ the KLD objective (but using a new test loss would be).
 In particular, the bias is a random variable, but its expectation is positive, so that the training loss is expected to be smaller than the expected test loss.
 Furthermore, the expectation of the bias is an increasing function of the dimensionality of $\theta$, or more precisely the number of degrees of freedom in the statistical estimation / parametrization of $Q$.
 The expected bias is decreasing in ensemble/sample size.
+[QUESTION: the above paragraph is very hard to read. to me this is a sequence of statements without any proofs or help with intuition for why this is true. are you tryin to say that we should not evaluate on the training set?]
 
 To alleviate this we can either adjust for the expectation in the bias, or just pass through a test-set not seen in the fitting of $\theta$.
 The latter does not require advanced use of theory (information criteria), and is an "obvious" thing to do.
@@ -160,25 +161,31 @@ Thus, using a test dataset, we would like to evaluate different models $Q$, perf
 
 ## Objectives for Kalman-type ensembles
 
-When constraining $Q$ to only encode information on the two first moments, that are learned from data, the KLD
-approach yields a Gaussian distribution $Q$ even when $P$ is non-Gaussian.
-We call methods using the Kalman-gain in Gaussian transport from prior to posterior as "Kalman-type" ensemble based data assimilation methods.
+Independently of the model distribution $P$, if we choose to only encode information about the two first moments in $Q$ (mean and covariance), then the Gaussian is the maximum entropy distribution.
+
+We will call methods that use the Kalman-gain in Gaussian transport from prior to posterior as "Kalman-type" ensemble based data assimilation methods.
+[QUESTION: are there any methods that do "gaussian transport" that do not use a kalman gain?]
 They implicitly seek to minimize information loss in this transport.
-Different Kalman-type modelling approaches essentially yields different estimates of the Kalman-gain, $K$.
-The following discuss how to evaluate (on some objective, using unseen test-data)
-which Kalman-gains are superior to others.
+
+Different Kalman-type modelling approaches essentially yields different estimates of the Kalman-gain $K = \Sigma_{xy}\Sigma_{y}^{-1}$.
+For instance, one approach could be to estimate $\Sigma_{xy}$ and $\Sigma_{y}$ directly.
+Another approach might be to regularize the matrices, or to write $\Sigma_{y} = H \Sigma_x H^T + \Sigma_{\epsilon}$ and estimate $H$ and $\Sigma_x$.
+Many approaches are possible.
+
+The following discuss how to evaluate (on some objective, using unseen test-data) which Kalman-gains are superior to others.
 This turns out to be non-trivial for several common applications like the EnKF/ES due to implicit singular covariance estimates.
 
 
 ### Joint-Gaussian
+
 The KLD approach suggests $-E_P[\log(Q)]$ as the objective of fitting $Q$.
-Taking $Q$ to be multivariate Gaussian, we arrive at the negative log-likelihood for a sample
+Taking $Q$ to be a multivariate Gaussian, we arrive at the negative log-likelihood for a sample
 
 $$
--\log p(x, y) = \frac{1}{2} \log \left| \begin{bmatrix}
+-\log p(x, y) = \frac{1}{2} \log \lVert \begin{bmatrix}
 \Sigma_{x} & \Sigma_{xy} \\
 \Sigma_{yx} & \Sigma_{y}
-\end{bmatrix} \right| + \frac{k}{2} \log(2\pi) + \frac{1}{2} \begin{bmatrix}
+\end{bmatrix} \rVert + \frac{k}{2} \log(2\pi) + \frac{1}{2} \begin{bmatrix}
 x - \mu_x \\
 y - \mu_y
 \end{bmatrix}^T \begin{bmatrix}
@@ -197,7 +204,9 @@ $$
 $$
 
 as an estimator of $-E_P[\log(Q)]$, suitable for fitting procedures.
+
 It may also be used for evaluation of different models, as long as the sample $(x_i,y_i)$ is not used to optimize $\theta$ parametrizing $Q$.
+
 This means we may use the same formula, but with a different test-set of samples.
 This is a natural objective if explicit estimates of $\Sigma_{x}$, $\Sigma_{xy}$, and $\Sigma_{y}$ are computed in creating
 an estimate $K=\Sigma_{xy}\Sigma_{y}^{-1}$.
@@ -206,15 +215,20 @@ for instance  $\Sigma_y=H\Sigma_xH^T+\Sigma_{\epsilon}$. Then only $\Sigma_x$ an
 It could also be that $\Sigma_x$ is diagonal, or is a function of some $\theta$ in a smaller dimensional space.
 We would then require fewer degrees of freedom to fit $\Sigma_x(\theta)$.
 
-Note that if covariance estimates are singular (i.e. EnKF when $p>n$) then this objective cannot be used due to the log-determinant and covariance inverse.
-Furthermore, we often only have access to the final estimate of the Kalman-gain, not the full covariance structure.
+An algorithm for evaluating the objective is sketched below:
+
+1. Generate training samples from the model distribution $P$
+2. Use the samples to find $\theta$ (mean and covariance) parametrizing $Q$
+3. Generate test samples from $P$ and evaluate $-\frac{1}{n}\sum_i \log(p(x_i,y_i))$, where the samples $(x_i,y_i)$ are from the test set, but the parameters $\theta$ that determine $p(x, y)$ were inferred using the training samples
+
+If the covariance estimates are singular (i.e. EnKF when $p>n$) then this objective cannot be used due to the log-determinant and covariance inverse.
+Furthermore, we often only have access to the final estimate of the Kalman-gain $K$, not the full covariance structure.
 
 ### Gaussian conditional marginal
 
 The joint KLD is a natural objective to evaluate model performance on.
-However, multiple (Kalman) ensemble methods only produce an estiamte $K$ either explicit or explicit,
-without specifying the full covariance structure.
-In such cases, the following objective, that still aligns with the joint-likelihood, is a natural objective.
+However, some Kalman ensemble methods produce an estimate $K$ without specifying the full covariance structure, i.e., without specifying $\Sigma_{x}$, $\Sigma_{xy}$, and $\Sigma_{y}$.
+In such cases, the following is a natural natural objective that still aligns with the joint-likelihood.
 It evaluates the model posterior using samples from the optimal posterior, and averaging over
 the conditioning variable $y$.
 
