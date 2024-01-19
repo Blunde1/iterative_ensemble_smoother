@@ -107,9 +107,9 @@ $$
 
 Note two formulas:
 
-1. Information is additive, and we may decompose the KLD as
-the KLD over the marginal and the expected conditional KLD w.r.t. the variable considered in the marginal.
-The optimization can be done disjoint if marginal and conditional marginal depend upon disjoint parameter-sets.
+1. Information is additive, and we may decompose the KLD as the KLD over the marginal and the expected conditional KLD w.r.t. the variable considered in the marginal.
+The optimization can be made disjoint if marginal and conditional marginal depend upon disjoint parameter-sets.
+See the Wikipedia entry on [conditional relative entropy](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence#Principle_of_minimum_discrimination_information)
 
 $$
 D_{KL}(P(x, y) \parallel Q(x, y)) = D_{KL}(P(y) \parallel Q(y)) + E_{P(y)}\left[D_{KL}(P(x | y) \parallel Q(x | y))\right]
@@ -129,6 +129,8 @@ $$
 $$
 
 This is the core of all of maximum likelihood estimation, information criteria, regression and supervised learning that use a negative log-likelihood as its loss function.
+
+See the section
 
 ### Why EnKF and ES work so well
 
@@ -232,7 +234,7 @@ In such cases, the following is a natural natural objective that still aligns wi
 It evaluates the model posterior using samples from the optimal posterior, and averaging over
 the conditioning variable $y$.
 
-Putting the two points of the joint KLD together, we obtain a regression objective
+Using both of the equations from the introductory section about the KLD together, we obtain the following regression objective:
 
 $$
 -E_{P(y)}\left[E_{P(x|y)}\left[ \log(Q(x|y)) \right]  \right].
@@ -250,8 +252,11 @@ $$
 $$
 
 $$
-\Sigma_{x^\ast}(\hat{K}) = \Sigma_{x} + \hat{K}\Sigma_y \hat{K}^T - 2 \Sigma_{xy}\hat{K}^T
+\Sigma_{x^\ast}(\hat{K}) =
+\Sigma_{x} - \hat{K} \Sigma_{yx} =
+\Sigma_{x} + \hat{K}\Sigma_y \hat{K}^T - 2 \Sigma_{xy}\hat{K}^T
 $$
+[QUESTION: why the new equation? why not use the same as in the intro?]
 
 When $\hat{K}=K=\Sigma_{xy}\Sigma_y^{-1}$ the expression simplifies to the afformentioned posterior.
 This conditional marginal is $Q(x|y)$.
@@ -267,64 +272,66 @@ $$
 $$
 
 approximates and indeed converges to the expected relative KLD on the conditional.
-Therefore it can be used to evaluate different Kalman-gain estimates, used for different transport.
+Therefore it can be used to evaluate different Kalman-gain estimates.
 
-Note that $\mu_{x^\ast}(y)$ and $\Sigma_{x^\ast}$ uses the true underlying covariance structure, in addition
-to $\hat{K}$.
+The mean $\mu_{x^\ast}(y)$ and covariance $\Sigma_{x^\ast}$ requires knowledge of the true underlying covariance structure, in addition to $\hat{K}$.
 This makes sense, because $\hat{K}$ has only been used to transport samples.
-To evaluate in this way does however require knowledge of these quantities, which is likely or often unknown.
-Otherwise they would be used in the creation of $\hat{K}$ to be exactly $K$.
-This evaluation therefore makes sense in synthetic cases where the prior is exactly known or simulated from,
-or where it can be simulated to create estimates of dependence independent of training data.
+Evaluating different Kalman-gain estimates in this way requires knowledge of these quantities, which is likely or often unknown.
+If they were known, they could've been used in the creation of $\hat{K}$ - making it equal to the true $K$.
+This evaluation method makes sense in synthetic cases where the prior is exactly known or simulated from, or where it can be simulated to create estimates of dependence independent of training data.
 
+[QUESTION: please re-write section below. try to be be more clear.]
 Using the estimates from the training data and modelling resulting in $\hat{K}$ yields
 a model where more is assumed, employed and also evaluated in the criterion, with regards to structure.
 It is more close to "believing" in the Gaussian, not just moment-estimation as an approximation and then used for updating.
 It is slightly too strict in terms of how what Kalman-type methods do (usage of $\hat{K}$ in transport).
-Note also that the estimated posterior covariance simplifies when using the same estimates used for $\hat{K}$, but the determinant is given by
+
+The posterior covariance determinant is given by
 
 ```math
 |\hat{\Sigma}_{x} - \hat{K} \hat{\Sigma}_{yx}|=
 |(I-\hat{K}\hat{H})\hat{\Sigma}_{x}|=
 |(I-\hat{K}\hat{H})||\hat{\Sigma}_{x}|
 ```
-
-so if the prior covariance estimate is singular $|\hat{\Sigma}_x|=0$
-(e.g. if using the sample covariance in place of $\Sigma_x$ and $p>n$)
-then so is the estimated posterior covariance of $x|y$.
-This highlights problems with using estimates from the training data associate $\hat{K}$.
-E.g. the Ensemble Smoother would not be possible to evaluate.
+If prior covariance estimate is singular $|\hat{\Sigma}_x|=0$, then so is the estimated posterior covariance of $x|y$.
+This can happen if we use the sample covariance in place of $\Sigma_x$ and $p>n$.
+This highlights problems with using estimates from the training data to infer other quantities than the Kalman gain $\hat{K}$.
 
 
 ### Generalized least squares objective
 
-If $X-KY$ has correlated residuals with a known covariance, then the objective
-yielding the _best_ (meaning minimum variance) unbiased (BLUE) estimator when minimized is the generalized least squares (GLS) objective
+[QUESTION: what is X and Y here, specifically?]
+[QUESTION: i don't understand why solving this problem gives us K. make clear the connection between the kalman gain and the equation KY=X ? i feel like a section is missing here.]
+If $X-KY$ has correlated residuals with a known covariance $\Omega$, then the objective
+yielding the BLUE (best linear unbiased estimate) estimator is the generalized least squares (GLS) objective.
+See the Wikipedia entry on the [Gauss–Markov theorem](https://en.wikipedia.org/wiki/Gauss%E2%80%93Markov_theorem) for more information about this.
+The GLS objective is
 
 $$
-\min_{\beta} (Y - X\beta)^T \Omega^{-1} (Y - X\beta)
+\text{minimize}_{\beta} \quad (Y - X\beta)^T \Omega^{-1} (Y - X\beta)
 $$
 
 so $\Omega=\Sigma_{x^\ast}(K)$
 and when this is known a-priori then $\hat{\beta}$ is the BLUE estimate of $K$.
 This is typically solved with weighted least squares methods.
 
-Unfortunately, $\Sigma_{x^\ast}(K)$ is generally unknown and must in some parts be estimated.
-Then, $\log |\Sigma_{x^\ast}(K)|$ should be included in the objective for accounting for this estimation and penalizing certainty.
+Unfortunately, $\Sigma_{x^\ast}(K)$ is generally unknown and must partly be estimated.
+The $\log |\Sigma_{x^\ast}(K)|$ term should be included in the objective to account for the estimation.
 One then once again arrives at the relevant parts of the negative log-likelihood for $p(x|y)$.
 
 
 ### Least squares objective
 
-If $K-KY$ satisfies the Gauss-Markov conditions, which it does when we assume that $(x,y)$ is Gaussian and $x|y$ has a diagonal posterior covariance,
-then the least squares objective provides the BLUE estimator when minimized
+If $X-KY$ satisfies the Gauss-Markov conditions, which it does when we assume that $(x,y)$ is Gaussian and $x|y$ has a diagonal posterior covariance,
+then the following least squares objective provides the BLUE estimator when minimized
 
 $$
-\min_{\beta} (Y - X\beta)^T (Y - X\beta)
+\text{minimize}_{\beta} (Y - X\beta)^T (Y - X\beta).
 $$
 
-Because of uncorrelated errors, the problem is separable and each dimension may be optimized individually in one-dimensional regressions.
-The LS objective corresponds to the GLS and more generally the Gaussian NLL when the assumptions are met.
+Because of uncorrelated errors, the problem is separable when $\beta$ is a matrix and each dimension may be optimized individually in one-dimensional regressions.
+See the section on [Multi-task learning](https://en.wikipedia.org/wiki/Matrix_regularization#Multi-task_learning) from Wikipedia under Matrix regularization.
+The LS objective corresponds to the GLS, and more generally the Gaussian NLL, when the assumptions are met.
 
 In general, the linear least squares estimator (LLS) is unbiased, so it converges to $K$ in our case, but it is not the BLUE estimator unless the errors indeed are uncorrelated.
 Note however that when $\Sigma_{x^\ast}(K)$ must be estimated and we employ the Gaussian $p(x,y)$ NLL and then solve for the Kalman gain,
@@ -370,7 +377,7 @@ But are generally less efficient in evaluating method performance (in particular
 > Evaluation of methods should be done using, preferably a large, test dataset.
 This is the easiest and most robust way to make sure we are evaluating the expectation over $P$.
 
-The following do not perform such evalutions, but attempts at discussing and motivating methods through knowledge of
+The following do not perform such evaluations, but attempts at discussing and motivating methods through knowledge of
 statistical methodology, in context of point 2, conditioned on the sizes of $p$ and $n$.
 This involves drawing on knowledge from information criteria, the bias-variance trade-off, and regularization techniques.
 No definite answers on what is the best method is given here.
@@ -398,7 +405,7 @@ Structure of the problem can be
 - Knowledge of $h$, e.g. direct observations encoded by $H$ with zeroes and ones.
 
 Encoding such information allows us to target the information in the samples $(x_i, y_i, d_i)$ towards information that is unknown and therefore must be learnt to obtain an estimate $\hat{K}$.
-Generally, encoding such information makes the bias of the traning loss smaller, which is good.
+Generally, encoding such information makes the bias of the training loss smaller, which is good.
 
 A final consideration is to add regularization of objectives.
 This induces bias in estimators, but reduces variance (bias-variance trade-off).
@@ -462,7 +469,7 @@ then the estimator is not the minimum variance estimator.
 It provides insight into that estimators of $\hat{K}$ can be produced through the LS objective on $X-KD$, which can be separated on the dimensions of $x$.
 
 In a comparison to e.g. ES, the difference lies in its uninformed (implied) sample estimate $\hat{\Sigma}_d$.
-The discrepancy from ES, and a poorer estimate, increaess in the dimension of $d$, and thus the number of obervations.
+The discrepancy from ES, and a poorer estimate, increaess in the dimension of $d$, and thus the number of observations.
 
 
 ### LASSO without structure
