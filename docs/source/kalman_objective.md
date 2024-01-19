@@ -69,7 +69,7 @@ Rather, the observation $d$ has variance $H \Sigma_x H^T + \Sigma_{\epsilon}$, s
 Because both $(d-d_i)$ and $d_i=Hx_i+\epsilon_i$ are additive, and $\epsilon$ is symmetric about $0$, it does not matter if we add the noise to $d$ or to $Hx$ in the expression $(d-d_i)$.
 If any of these points were different, it would be evident that we are not perturbing observations.
 It is _incorrect_ to say that we perturb the observations.
-It is _correct_ to say that we sample from the distribution of $d$, accounting from both prior parameter uncertainty $H \Sigma_x H^T$ _and_ observation uncertainty $\Sigma_{\epsilon}$.
+It is _correct_ to say that we sample from the distribution of $d$, accounting for both prior parameter uncertainty $H \Sigma_x H^T$ _and_ observation uncertainty $\Sigma_{\epsilon}$.
 
 ### Using the first two moments
 
