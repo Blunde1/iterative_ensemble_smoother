@@ -39,7 +39,7 @@ K = \Sigma_{xy}\Sigma_{y}^{-1}.
 $$
 
 Then, a multivariate sample $(x_i,y_i)$ is _transported_ to a sample from the conditional
-$p(x|y)$, having observed $y$ as such, via the formula 
+$p(x|y)$, having observed $y$ as such, via the formula
 
 $$
 x_i + K(y-y_i) \sim p(x|y).
@@ -51,9 +51,9 @@ $$
 x | y \sim \mathcal{N}(\mu_x + K(y - \mu_y), \Sigma_{x} - K \Sigma_{yx}).
 $$
 
-For any distribution having a bijection between (the informative parts of) 
+For any distribution having a bijection between (the informative parts of)
 $x$ and $y$, there exist a similar mapping, transporting a sample $(x,y)$ to $x|y$.
-The EnKF and ES variants follows from writing $y=d=Hx+\epsilon$ where 
+The EnKF and ES variants follows from writing $y=d=Hx+\epsilon$ where
 $\epsilon\sim \mathcal{N}(0,\Sigma_{\epsilon})$, thus $\Sigma_y=H\Sigma_xH^T+\Sigma_{\epsilon}$.
 Note that $y$ is common to use as $y=Hx$ but this is not the case in the preliminaries here.
 A point of confusion is that it is indeed _not_ the observation $d$ that is "perturbed" with noise,
@@ -95,7 +95,7 @@ $$
 
 Note two formulas:
 
-1. Information is additive, and we may decompose the KLD as 
+1. Information is additive, and we may decompose the KLD as
 the KLD over the marginal and the expected conditional KLD w.r.t. the variable considered in the marginal.
 The optimization can be done disjoint if marginal and conditional marginal depend upon disjoint parameter-sets.
 
@@ -103,14 +103,14 @@ $$
 D_{KL}(P(x, y) \parallel Q(x, y)) = D_{KL}(P(y) \parallel Q(y)) + E_{P(y)}\left[D_{KL}(P(x | y) \parallel Q(x | y))\right]
 $$
 
-2. The relative Kullback-Leibler Divergence (KLD) between two distributions 
+2. The relative Kullback-Leibler Divergence (KLD) between two distributions
 $P$ and $Q$ is given by:
 
 $$
 D_{KL}(P \parallel Q) = E_P[\log(P)] - E_P[\log(Q)]
 $$
 
-Dropping the first term, which is constant with respect to the model 
+Dropping the first term, which is constant with respect to the model
 $Q$, and retaining the negative of the latter term gives us the objective of maximizing the likelihood (or minimizing the negative log-likelihood) of $Q$:
 
 $$
@@ -122,7 +122,7 @@ This is the core for all of maximum likelihood estimation, information criteria,
 ### Why EnKF and ES works so well
 
 Let $(x,y)\sim P$ possibly non-Gaussian and assume we have a finite dataset to infer a model $Q$ from.
-Arguably, the most important aspects to encode in $Q$, without any other knowledge, are 
+Arguably, the most important aspects to encode in $Q$, without any other knowledge, are
 the two first moments of $P$.
 Having access to the sample covariances of
 $\Sigma_{xy}$
@@ -178,7 +178,7 @@ y - \mu_y
 \end{bmatrix}
 $$
 
-and the negative log-likelihood 
+and the negative log-likelihood
 
 $$
 -\frac{1}{n}\sum_i \log(p(x_i,y_i))
@@ -216,7 +216,7 @@ In spoken language, this means the negative log-likelihood for the conditional,
 and the conditioning variable $y$ is sampled from its true distribution and then averaged over.
 
 A Kalman-type method estimating a model Kalman-gain, say $\hat{K}$, transports samples $(x_i,y_i)$
-according to 
+according to
 $x_i^\ast =x_i + \hat{K} (y-y_i)$ which is Gaussian with mean and covariance
 
 $$
@@ -308,7 +308,7 @@ It is offset in the exact way so that we arrive at LLS, which we _know_ is ineff
 
 It is possible to now err and reason that due to arriving at the same stimator, the LS and Gaussian-NLL objectives are equivalent.
 This is, however false.
-It is rather that in this particular case, when we have failed to inform of structure in dependence, 
+It is rather that in this particular case, when we have failed to inform of structure in dependence,
 then the Gaussian-NLL arrives at the same inefficient LLS estimator.
 We know that the LLS estimator is inefficient when Gauss-Markov conditions are not satisfied.
 And we know that this is because the LS objective then does not appropriately target dependence.
@@ -331,21 +331,21 @@ This is challenging for two reasons:
 2. The KLD objective on learning a Gaussian transport function, and the bias of the training loss, showcases that it is properties of convergence on the path to the asymptotic case that is important to discuss when comparing methods.
 
 Because point 2. has not historically been considered in point 1, common methods employed at $p>n$ are not easy to discuss.
-It is symptoms of poor performance in point 2 (ensemble collapse and spurious correlations) that have led to many of the developments in Kalman-type ensemble based methods.
-It is however better to evaluate point 2 directly, and then discuss the symptoms of poor behaviour in context of this.
+Symptoms of poor performance in point 2 (ensemble collapse and spurious correlations) have led to many of the developments in Kalman-type ensemble based methods.
+
+It is better to evaluate point 2 directly, and then discuss the symptoms of poor behaviour in this context.
 The previous sections show that asymptotically different objectives provide the same estimator.
 This does however not mean that different objectives are equally "good".
 
 > The expected KLD (over $y\sim P(y)$ ) of $Q(x|y)$ to $P(x|y)$ that the updated ensemble is sampled from, is the goal.
 
-Then GLS and LS is consistent with this under specific conditions, but may be easier to apply generally.
-But are generally less efficient in evaluating method performance (in particular the LS objective).
+GLS and LS is consistent with KLD under specific conditions, but may be easier to apply generally.
+However, they are generally less efficient than KLD in evaluating method performance (in particular the LS objective).
 
-> Evaluation of methods should be done using, preferably a large, test dataset.
+> Method evaluation should be using a (preferably large) test data set.
 This is the easiest and most robust way to make sure we are evaluating the expectation over $P$.
 
-The following do not perform such evalutions, but attempts at discussing and motivating methods through knowledge of 
-statistical methodology, in context of point 2, conditioned on the sizes of $p$ and $n$.
+The following sections discuss and motivate methods through knowledge of tatistical methodology, in context of point 2, conditioned on the sizes of $p$ and $n$.
 This involves drawing on knowledge from information criteria, the bias-variance trade-off, and regularization techniques.
 No definite answers on what is the best method is given here.
 The goal is to provide a feeling and intuition for how the methods will perform, how they should be appropriately evaluated, and guidance towards developing new methods in terms of optimizing point 2 above.
@@ -353,37 +353,43 @@ The goal is to provide a feeling and intuition for how the methods will perform,
 
 ### Modelling setup
 
-The structures of an ensemble based data assimilation problem is now defined.
-We now change notation slightly.
-Let $x$ be sampled from some distribution with finite two first moments.
-Define $y=h(x)$, possibly non-linear, and $d=y+\epsilon$ where $\epsilon\sim N(0,\Sigma_{\epsilon})$
-and $\Sigma_{\epsilon})$ is assumed diagonal.
+The structure of an ensemble based data assimilation problem is now defined.
+We will now change notation slightly.
+Let parameters $x$ be sampled a distribution with finite two first moments.
+Define $y=h(x)$, where $h$ is a possibly non-linear function (forward model).
+Define $d=y+\epsilon$, where $\epsilon\sim N(0,\Sigma_{\epsilon})$
+and $\Sigma_{\epsilon}$ is diagonal.
 
-We have an observation vector, say $d^\ast$.
-We have a sample of $x$'s, say $x_i$, that we pass through $y$ to get a corresponding sample of $y_i$'s, and then 
-sample some $\epsilon_i$'s appropriately so that we have samples $(x_i,y_i,d_i)$.
-The goal is to use these samples to learn the best possible $\hat{K}$ to transport the samples $(x_i,d_i)$ to a sample, sampled from a distribution as close as possible to $x\sim p(x_i|d^\ast)$.
+We have a single observation vector, say $d^\ast$, from the real-world.
+We have samples $x_i$ that we pass through $h$ to get a corresponding samples $y_i$.
+We then sample $\epsilon_i$, so that we have samples $(x_i,y_i,d_i)$.
 
-Structure of the problem can be
+The goal is to use these samples to learn the best possible $\hat{K}$ to transport the samples $(x_i,d_i)$ to a sample from a distribution as close as possible to $x\sim p(x_i|d^\ast)$.
+This answers the question "what is the distribution of the parameters $x$, given that we have observed $d^\ast$"?
+
+The structure of the problem can be:
+
 - $d=y+\epsilon$
 - Knowledge of $\Sigma_{\epsilon}$
-- Knowledge of $\Sigma_{x}$
-- Knowledge of the structure of $\Sigma_{x}^{-1}$ (encoding Markov properties)
-- Knowledge of $h$, e.g. direct observations encoded by $H$ with zeroes and ones.
+- Knowledge of the covariance matrix $\Sigma_{x}$
+- Knowledge of the structure of the precision matrix $\Sigma_{x}^{-1}$ (encoding Markov properties)
+- Knowledge of the structure of $h$, e.g. direct observations encoded by $H$ with zeroes and ones. For instance, if we know which parameters do and don't influence the responses.
 
-Encoding such information allows us to target the information in the samples $(x_i, y_i, d_i)$ towards information that is unknown and therefore must be learnt to obtain an estimate $\hat{K}$.
-Generally, encoding such information makes the bias of the traning loss smaller, which is good.
+Encoding such information allows us to learn the information in the samples $(x_i, y_i, d_i)$ that is unknown.
+Unknown information must be learnt to obtain an estimate $\hat{K}$, and generally the more structure we know and impose, the less we have to learn from the data.
+Encoding information generally makes the bias of the training loss smaller, which is good.
 
 A final consideration is to add regularization of objectives.
-This induces bias in estimators, but reduces variance (bias-variance trade-off).
-Overall, this can lead to improved performance on test-loss, which is our goal.
-This therefore provides guidance in developing estimates of K.
+An example of this could be to regularize a covariance matrix towards the identity.
+Regularization induces bias in estimators, but reduces variance (bias-variance trade-off).
+This can lead to improved performance toward on our, which is minimizing test-loss.
+Regularization techniques can provide guidance for developing estimates of $K$.
 
 
 ### Ensemble smoother
 
-The Ensemble Smoother (ES) is developed through 
-1. Sample covariance matrices $`\hat{\Sigma}_{xy}`$, $`\hat{\Sigma}_{y}`$ converges to the population quantities at an infinite ensemble size. 
+The Ensemble Smoother (ES) is developed through
+1. Sample covariance matrices $`\hat{\Sigma}_{xy}`$, $`\hat{\Sigma}_{y}`$ converges to the population quantities at an infinite ensemble size.
 2. Find $`\hat{\Sigma}_{d}=\hat{\Sigma}_y + \Sigma_{\epsilon}`$ which is guaranteed SPD.
 3. Solve $`\hat{K}=\hat{\Sigma}_{xy}\hat{\Sigma}_{d}^{-1}`$
 
@@ -400,7 +406,7 @@ The sample cross-covariance $`\hat{\Sigma}_{xy}`$ is the sample-covariance $`\ha
 
 ### Adaptive localization: correlation-based model selection
 
-Recognizing spurious correlations. 
+Recognizing spurious correlations.
 Recognizing sampling distribution of spurious correlations.
 Do automatic model selection between LS regressions in $x$ and $y$.
 Improves estimates Kalman gain. Less degrees of freedom used.
@@ -416,7 +422,7 @@ So update encoded in Kalman gain should be zero if $d_j$ and $x_k$ are far away 
 
 ### Linear least squares
 
-The LLS Kalman gain estimate (NORCE slides) is 
+The LLS Kalman gain estimate (NORCE slides) is
 
 $$
 \hat{K} = X^TD(D^TD)^{-1}
@@ -426,50 +432,52 @@ It is both a solution from fiding the MLE estimates (if $n>p$) for the full cova
 or from solving the LS objective on $X-KD$.
 As noted earlier, these produce the same estimator here.
 
-- Does not use any prior knowledge of structure of the problem 
+- Does not use any prior knowledge of structure of the problem
 - No regularization of the likelihood objective or LS objective.
 
 Since this estimator has the propertis of LLS, we know it is unbiased asymptotically.
-But, when the Gauss-Markov conditions are not satisfied, which they are _not_ due to prior correlation in the prior of $x$, 
+But, when the Gauss-Markov conditions are not satisfied, which they are _not_ due to prior correlation in the prior of $x$,
 then the estimator is not the minimum variance estimator.
 
 It provides insight into that estimators of $\hat{K}$ can be produced through the LS objective on $X-KD$, which can be separated on the dimensions of $x$.
 
-In a comparison to e.g. ES, the difference lies in its uninformed (implied) sample estimate $\hat{\Sigma}_d$. 
+In a comparison to e.g. ES, the difference lies in its uninformed (implied) sample estimate $\hat{\Sigma}_d$.
 The discrepancy from ES, and a poorer estimate, increaess in the dimension of $d$, and thus the number of obervations.
 
 
 ### LASSO without structure
 
 Using the same objective as for LLS, i.e. LS, which produces inefficient but unbiased estimators, can be used with other linear regression techniques.
-In particular LASSO, better solving the bias-variance tradeoff than LLS, comes to mind, due to the explainability of a sparse estimate $`\hat{K}_{lasso}`$.
-If both $`{\Sigma_{x}}`$, $H$, and $`\Sigma_{\epsilon}`$ are sparse, then $K$ should also be sparse.
-LASSO is ideally suited to learn this sparsity from data.
-The downside is that this sparsity is often known a-priori, except perhaps for the structure of $H$, but is not used to inform the regression here.
+LASSO comes to mind due to the explainability of a sparse estimate $`\hat{K}_{lasso}`$.
+It's also better at at solving the bias-variance tradeoff than LLS.
+
+If $`{\Sigma_{x}}`$, $H$, and $`\Sigma_{\epsilon}`$ are sparse, then $K$ should also be sparse.
+LASSO is suited to learn this sparsity from data.
+The downside is that prior known sparsity cannot be used to inform the regression.
 As such, it suffers from the same problem as LLS compared to ES, but to a much smaller extent.
 It likely benefits compared to ES when $\Sigma_x$ is sparse.
 
-Thus LASSO without structure makes sense (perhaps, this should be tested on data(!) as for everything) over ES (and always over LLS) when
+LASSO without structure makes sense (perhaps, this should be tested on data(!) as for everything) over ES (and always over LLS) when
+
 - The dimensions of the problem is not enormous (thousands, not fields).
 - There are more than a few parameters (ES is good when this number is _very_ small).
-- The Kalman gain can be well approximated with a sparse matrix (almost a necessity: prior on parameters is sparse or diagonal).
+- The Kalman gain can be well approximated by a sparse matrix (almost a necessity: prior on parameters is sparse or diagonal).
 - One seeks an human-understandable model.
 
 Derivations with scaling should maybe be produced, again.
-
 
 ### Using all structure: EnIF
 
 Ideally we would like to encode all the structure that is known a-priori.
 Furthermore, we prefer doing the bias-variance trade-off over purely BLUE estimators, because evaluation on test-data is our target.
-EnIF allows encoding all (or none of) the information 
+EnIF allows encoding all (or none of) the information
 
 - $d=y+\epsilon$
 - $\Sigma_{\epsilon}$ is known
 - $H$ is possibly known
 - $\Sigma_x$ is possibly known, or at least non-zeroes $\Sigma_x^{-1}$ are known
 
-If non-zeroes $\Sigma_x^{-1}$ are not known, they provide a powerful parsimoneous model-selection tool even when 
+If non-zeroes $\Sigma_x^{-1}$ are not known, they provide a powerful parsimoneous model-selection tool even when
 $\Sigma_x^{-1}$ is dense.
 
 Solutions of $H$ is found through LASSO on $Y-HX$.
