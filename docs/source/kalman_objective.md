@@ -388,20 +388,21 @@ Regularization techniques can provide guidance for developing estimates of $K$.
 
 ### Ensemble smoother
 
-The Ensemble Smoother (ES) is developed through
-1. Sample covariance matrices $`\hat{\Sigma}_{xy}`$, $`\hat{\Sigma}_{y}`$ converges to the population quantities at an infinite ensemble size.
+The Ensemble Smoother (ES) rests on the following steps
+
+1. The sample covariance matrices $`\hat{\Sigma}_{xy}`$ and $`\hat{\Sigma}_{y}`$ converge to the population quantities at an infinite ensemble size.
 2. Find $`\hat{\Sigma}_{d}=\hat{\Sigma}_y + \Sigma_{\epsilon}`$ which is guaranteed SPD.
 3. Solve $`\hat{K}=\hat{\Sigma}_{xy}\hat{\Sigma}_{d}^{-1}`$
 
-- Some structure is employed, namely that $d=y+\epsilon$ and knowledge of the noise-covariance.
+- Some structure is employed, namely that $d=y+\epsilon$ and knowledge of the noise-covariance $`\Sigma_{\epsilon}`$.
 This is good.
 - Any knowledge of structure in $\Sigma_{x}$ or $h$, or even the exact quantity, is not used.
-Neither is regularization techniques to improve on the sample-covariance matrices.
+Regularization techniques are not used to improve on the sample-covariance matrices.
 
-The likely consequence is overfitting to training set (the ensemble), and thus spurious correlations and ensemble collapse at large dimensions.
+ES likely overfits to training set (the ensemble), and can therefore experience spurious correlations and ensemble collapse in large dimensions.
 
-Notice that the ES solution of using sample covariances can be found as the solution of the MLE when $n>p$ and also the LS regression from $x\to y$.
-The sample cross-covariance $`\hat{\Sigma}_{xy}`$ is the sample-covariance $`\hat{\Sigma}_{x}`$ multiplied with the LLS estimate $\hat{H}$ for $Y-HX$.
+The ES solution of using sample covariances can be found as the solution of the MLE when $n>p$ and also the LS regression from $x\to y$.
+When the mapping $h$ is linear, e.g. $y = H x$, then sample cross-covariance $`\hat{\Sigma}_{xy}`$ is the sample-covariance $`\hat{\Sigma}_{x}`$ multiplied with the LLS estimate $\hat{H}$ for $HX=Y$.
 
 
 ### Adaptive localization: correlation-based model selection
@@ -425,31 +426,32 @@ So update encoded in Kalman gain should be zero if $d_j$ and $x_k$ are far away 
 The LLS Kalman gain estimate (NORCE slides) is
 
 $$
-\hat{K} = X^TD(D^TD)^{-1}
+\hat{K} = X^TD(D^TD)^{-1},
 $$
+
+where $D = Y + N(0,\Sigma_{\epsilon})$.
 
 It is both a solution from fiding the MLE estimates (if $n>p$) for the full covariance matrix on $(x,d)$ using samples $(x_i,d_i)$,
 or from solving the LS objective on $X-KD$.
 As noted earlier, these produce the same estimator here.
 
-- Does not use any prior knowledge of structure of the problem
+- Does not use any prior knowledge of structure of the problem.
 - No regularization of the likelihood objective or LS objective.
 
 Since this estimator has the propertis of LLS, we know it is unbiased asymptotically.
-But, when the Gauss-Markov conditions are not satisfied, which they are _not_ due to prior correlation in the prior of $x$,
-then the estimator is not the minimum variance estimator.
+The Gauss-Markov conditions are _not_ satisfied due to the correlation in the prior of $x$, so the estimation is not the minimum variance estimator.
 
 It provides insight into that estimators of $\hat{K}$ can be produced through the LS objective on $X-KD$, which can be separated on the dimensions of $x$.
 
 In a comparison to e.g. ES, the difference lies in its uninformed (implied) sample estimate $\hat{\Sigma}_d$.
-The discrepancy from ES, and a poorer estimate, increaess in the dimension of $d$, and thus the number of obervations.
+The discrepancy from ES, and a poorer estimate, increases in the dimension of $d$, and thus the number of obervations.
 
 
 ### LASSO without structure
 
 Using the same objective as for LLS, i.e. LS, which produces inefficient but unbiased estimators, can be used with other linear regression techniques.
 LASSO comes to mind due to the explainability of a sparse estimate $`\hat{K}_{lasso}`$.
-It's also better at at solving the bias-variance tradeoff than LLS.
+It's also better at solving the bias-variance tradeoff than LLS.
 
 If $`{\Sigma_{x}}`$, $H$, and $`\Sigma_{\epsilon}`$ are sparse, then $K$ should also be sparse.
 LASSO is suited to learn this sparsity from data.
@@ -469,15 +471,15 @@ Derivations with scaling should maybe be produced, again.
 ### Using all structure: EnIF
 
 Ideally we would like to encode all the structure that is known a-priori.
-Furthermore, we prefer doing the bias-variance trade-off over purely BLUE estimators, because evaluation on test-data is our target.
-EnIF allows encoding all (or none of) the information
+We prefer doing the bias-variance trade-off over purely BLUE estimators, because evaluation on test-data is our target.
+EnIF allows, but does not necessitate, encoding the following information:
 
 - $d=y+\epsilon$
 - $\Sigma_{\epsilon}$ is known
 - $H$ is possibly known
-- $\Sigma_x$ is possibly known, or at least non-zeroes $\Sigma_x^{-1}$ are known
+- $\Sigma_x$ is possibly known, or at least location of non-zero entries in $\Sigma_x^{-1}$ are known
 
-If non-zeroes $\Sigma_x^{-1}$ are not known, they provide a powerful parsimoneous model-selection tool even when
+If non-zeroes in $\Sigma_x^{-1}$ are known, they provide a powerful parsimoneous model-selection tool even when
 $\Sigma_x^{-1}$ is dense.
 
 Solutions of $H$ is found through LASSO on $Y-HX$.
